@@ -3,19 +3,24 @@ import json
 import os
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 import subprocess
 
 ORDERS_FILE = '/var/www/html/digital-noodle-house/orders.txt'
 
 def get_orders():
     if os.path.exists(ORDERS_FILE):
-        with open(ORDERS_FILE, 'r') as f:
-            return len(f.read().strip().split('\n')) if f.read().strip() else 0
+        try:
+            with open(ORDERS_FILE, 'r') as f:
+                content = f.read().strip() # 修复点：一次性读取内容
+                return len(content.split('\n')) if content else 0
+        except:
+            return 0
     return 0
 
 def get_cpu():
     try:
+        # 使用 -n1 确保单次采样
         result = subprocess.run(['top', '-bn1'], capture_output=True, text=True, timeout=5)
         for line in result.stdout.split('\n'):
             if '%Cpu' in line:
@@ -43,6 +48,7 @@ def get_load():
 
 def get_connections():
     try:
+        # 统计 80 端口的连接数
         result = subprocess.run(['netstat', '-an'], capture_output=True, text=True, timeout=5)
         return str(len([l for l in result.stdout.split('\n') if ':80' in l and 'ESTABLISHED' in l]))
     except:
@@ -63,25 +69,13 @@ def get_hostname():
         return "unknown"
 
 class StatsHandler(BaseHTTPRequestHandler):
-    protocol_version = 'HTTP/1.1'
-    
-    def _set_headers(self):
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Connection', 'close')
-        self.send_header('Cache-Control', 'no-cache')
-    
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self._set_headers()
-        self.end_headers()
-    
     def do_GET(self):
-        from urllib.parse import parse_qs
-        query = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        # 解析 URL 路径和参数
+        parsed_path = urlparse(self.path)
+        query = parse_qs(parsed_path.query)
         callback = query.get('callback', [None])[0]
         
-        if self.path.startswith('/api/stats') or self.path.startswith('/stats'):
+        if parsed_path.path in ['/api/stats', '/stats']:
             uptime = get_uptime()
             days = int(uptime // 86400)
             hours = int((uptime % 86400) // 3600)
@@ -98,20 +92,20 @@ class StatsHandler(BaseHTTPRequestHandler):
             }
             
             self.send_response(200)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Cache-Control', 'no-cache')
+            
             if callback:
                 self.send_header('Content-Type', 'application/javascript')
-                self.send_header('Access-Control-Allow-Origin', '*')
                 output = f"{callback}({json.dumps(stats)})"
             else:
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
                 output = json.dumps(stats)
-            self.send_header('Connection', 'close')
+            
             self.end_headers()
             self.wfile.write(output.encode())
         else:
             self.send_response(404)
-            self._set_headers()
             self.end_headers()
 
 if __name__ == '__main__':
