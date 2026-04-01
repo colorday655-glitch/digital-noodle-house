@@ -1,0 +1,44 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<project>
+  <description>无人面馆 CI/CD 流水线</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.plugins.git.GitSCM">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>https://github.com/colorday655-glitch/digital-noodle-house.git</url>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec>
+        <name>*/main</name>
+      </hudson.plugins.git.BranchSpec>
+    </branches>
+  </scm>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <triggers>
+    <com.cloudbees.jenkins.GitHubPushTrigger plugin="github@1.46.0">
+      <spec></spec>
+    </com.cloudbees.jenkins.GitHubPushTrigger>
+  </triggers>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>#!/bin/bash
+# 质检
+grep -q "红烧肉面" index.html &amp;&amp; grep -q "清炒时蔬" index.html &amp;&amp; echo "质检通过" || exit 1
+
+# 安装sshpass
+which sshpass || apt-get update &amp;&amp; apt-get install -y sshpass || true
+
+# 部署
+sshpass -p "Xq87WaE9vMfW20l3hQ" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@173.254.206.13 "mkdir -p /var/www/html/digital-noodle-house"
+sshpass -p "Xq87WaE9vMfW20l3hQ" scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 index.html root@173.254.206.13:/var/www/html/digital-noodle-house/
+
+# 飞书通知
+curl -X POST -H "Content-Type: application/json" -d '{"msg_type":"text","content":{"text":"✅ 质检通过，招牌菜品已自动上架正式环境，准备营业！"}}' "https://open.feishu.cn/open-apis/bot/v2/hook/1c2e5968-071c-4a69-b88d-c881b55754cc"</command>
+      <configuredLocalRules/>
+    </hudson.tasks.Shell>
+  </builders>
+</project>
