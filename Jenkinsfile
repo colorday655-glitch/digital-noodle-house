@@ -27,13 +27,22 @@ pipeline {
             steps {
                 sh 'sshpass -p "${VM_PWD}" ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_HOST} "mkdir -p ${TARGET_DIR}"'
                 sh 'sshpass -p "${VM_PWD}" scp -o StrictHostKeyChecking=no index.html ${VM_USER}@${VM_HOST}:${TARGET_DIR}/'
+                sh 'sshpass -p "${VM_PWD}" scp -o StrictHostKeyChecking=no dashboard.html ${VM_USER}@${VM_HOST}:${TARGET_DIR}/'
+                sh 'sshpass -p "${VM_PWD}" scp -o StrictHostKeyChecking=no server.py ${VM_USER}@${VM_HOST}:${TARGET_DIR}/'
                 echo '部署完成'
+            }
+        }
+        
+        stage('启动监控服务') {
+            steps {
+                sh 'sshpass -p "${VM_PWD}" ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_HOST} "pkill -f server.py || true; cd ${TARGET_DIR} && nohup python3 server.py > /tmp/server.log 2>&1 &"'
+                echo '监控服务已启动'
             }
         }
         
         stage('飞书通知') {
             steps {
-                sh 'curl -X POST -H "Content-Type: application/json" -d "{\\"msg_type\\":\\"text\\",\\"content\\":{\\"text\\":\\"✅ 质检通过，招牌菜品已自动上架正式环境，准备营业！\\"}}" "${FEISHU_WEBHOOK}"'
+                sh 'curl -X POST -H "Content-Type: application/json" -d "{\\"msg_type\\":\\"text\\",\\"content\\":{\\"text\\":\\"✅ 点餐页面 + 监控仪表盘已部署完成！\\n访问: http://jackbaba.cn/digital-noodle-house/\\n监控: http://jackbaba.cn/digital-noodle-house/dashboard.html\\"}}" "${FEISHU_WEBHOOK}"'
             }
         }
     }
