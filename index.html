@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>张大爷无人面馆</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 48px;
+            color: #1a1a1a;
+            margin-bottom: 60px;
+            text-align: center;
+        }
+
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .btn {
+            background: #1a365d;
+            color: #ffffff;
+            border: none;
+            font-size: 48px;
+            padding: 60px 80px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background: #2c5282;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .popup.show {
+            display: flex;
+        }
+
+        .popup-content {
+            background: #ffffff;
+            padding: 60px 80px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .popup-text {
+            font-size: 48px;
+            color: #1a365d;
+            font-weight: bold;
+        }
+
+        .popup-sub {
+            font-size: 36px;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .close-btn {
+            margin-top: 40px;
+            background: #1a365d;
+            color: #ffffff;
+            border: none;
+            font-size: 36px;
+            padding: 30px 60px;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+
+        .red-envelope {
+            background: #c41e3a;
+            color: #ffd700;
+        }
+
+        .red-envelope .popup-text {
+            color: #ffd700;
+        }
+
+        .red-envelope .close-btn {
+            background: #ffd700;
+            color: #c41e3a;
+        }
+
+        .timer {
+            font-size: 32px;
+            color: #1a365d;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .timer.show {
+            display: block;
+        }
+
+        .served-btn {
+            margin-top: 30px;
+            background: #22c55e;
+            color: #ffffff;
+            border: none;
+            font-size: 32px;
+            padding: 25px 50px;
+            border-radius: 15px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .served-btn.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>请选择您想吃的面</h1>
+    
+    <div class="menu">
+        <button class="btn" onclick="orderDish('红烧肉面', 15)">红烧肉面 ¥15</button>
+        <button class="btn" onclick="orderDish('清炒时蔬', 8)">清炒时蔬 ¥8</button>
+    </div>
+
+    <div class="timer" id="timer">等待出餐中... <span id="countdown"></span></div>
+    <button class="served-btn" id="servedBtn" onclick="markServed()">已出餐</button>
+
+    <div class="popup" id="popup">
+        <div class="popup-content">
+            <p class="popup-text" id="popupText">下单成功<br>预计 10 分钟出餐</p>
+            <p class="popup-sub" id="popupSub"></p>
+            <button class="close-btn" onclick="closePopup()">知道了</button>
+        </div>
+    </div>
+
+    <script>
+        let countdownInterval = null;
+        let orderStartTime = null;
+
+        function playDingDong() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            function playNote(freq, startTime, duration) {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.5, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            }
+
+            const now = audioCtx.currentTime;
+            playNote(880, now, 0.15);
+            playNote(1108.73, now + 0.15, 0.4);
+
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
+        }
+
+        function generateRedPacketCode() {
+            return 'RD' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        }
+
+        function showPopup(text, subText, isRedEnvelope = false) {
+            const popup = document.getElementById('popup');
+            const popupText = document.getElementById('popupText');
+            const popupSub = document.getElementById('popupSub');
+            const popupContent = popup.querySelector('.popup-content');
+            
+            popupText.innerHTML = text;
+            popupSub.textContent = subText || '';
+            
+            if (isRedEnvelope) {
+                popupContent.classList.add('red-envelope');
+            } else {
+                popupContent.classList.remove('red-envelope');
+            }
+            
+            popup.classList.add('show');
+        }
+
+        function closePopup() {
+            document.getElementById('popup').classList.remove('show');
+        }
+
+        function orderDish(dishName, price) {
+            playDingDong();
+            
+            showPopup('下单成功<br>预计 10 分钟出餐', dishName + ' ¥' + price);
+            
+            orderStartTime = Date.now();
+            startCountdown();
+        }
+
+        function startCountdown() {
+            const timerEl = document.getElementById('timer');
+            const countdownEl = document.getElementById('countdown');
+            const servedBtn = document.getElementById('servedBtn');
+            
+            timerEl.classList.add('show');
+            servedBtn.classList.add('show');
+            
+            const TIMEOUT_MS = 15 * 60 * 1000;
+            
+            countdownInterval = setInterval(() => {
+                const elapsed = Date.now() - orderStartTime;
+                const remaining = TIMEOUT_MS - elapsed;
+                
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    showRedEnvelope();
+                    return;
+                }
+                
+                const minutes = Math.floor(remaining / 60000);
+                const seconds = Math.floor((remaining % 60000) / 1000);
+                countdownEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function showRedEnvelope() {
+            const amounts = [1, 1.5, 2, 2.5, 3];
+            const amount = amounts[Math.floor(Math.random() * amounts.length)];
+            const code = generateRedPacketCode();
+            
+            showPopup(
+                '超时红包补偿<br>¥' + amount,
+                '兑换码：' + code + '<br>请出示给村委兑换',
+                true
+            );
+        }
+
+        function markServed() {
+            clearInterval(countdownInterval);
+            const timerEl = document.getElementById('timer');
+            const servedBtn = document.getElementById('servedBtn');
+            timerEl.classList.remove('show');
+            servedBtn.classList.remove('show');
+            
+            showPopup('取餐成功<br>祝您用餐愉快', '');
+        }
+    </script>
+</body>
+</html>
