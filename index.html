@@ -182,6 +182,42 @@
         let countdownInterval = null;
         let orderStartTime = null;
         let isOrdering = false;
+        let dishInProgress = null;
+
+        function init() {
+            restoreOrder();
+            setupNetworkListener();
+        }
+
+        function setupNetworkListener() {
+            window.addEventListener('online', () => {
+                showPopup('网络已恢复<br>订单同步成功', '');
+            });
+            window.addEventListener('offline', () => {
+                showPopup('网络已断开<br>订单暂存本地', '请稍后重试');
+            });
+        }
+
+        function restoreOrder() {
+            const saved = localStorage.getItem('noodleOrder');
+            if (saved) {
+                const order = JSON.parse(saved);
+                orderStartTime = order.startTime;
+                dishInProgress = order.dishName;
+                startCountdown();
+            }
+        }
+
+        function saveOrder(dishName) {
+            localStorage.setItem('noodleOrder', JSON.stringify({
+                startTime: orderStartTime,
+                dishName: dishName
+            }));
+        }
+
+        function clearOrder() {
+            localStorage.removeItem('noodleOrder');
+        }
 
         function playDingDong() {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -205,6 +241,8 @@
 
             if (navigator.vibrate) {
                 navigator.vibrate([200, 100, 200]);
+            } else {
+                showPopup('下单成功<br>（如未听到声音，请查看屏幕确认）', '');
             }
         }
 
@@ -247,6 +285,7 @@
         function orderDish(dishName, price) {
             if (isOrdering) return;
             isOrdering = true;
+            dishInProgress = dishName;
 
             if (countdownInterval) {
                 clearInterval(countdownInterval);
@@ -256,6 +295,7 @@
             showPopup('下单成功<br>预计 10 分钟出餐', dishName + ' ¥' + price);
             
             orderStartTime = Date.now();
+            saveOrder(dishName);
             startCountdown();
             
             setTimeout(() => { isOrdering = false; }, 2000);
@@ -288,6 +328,7 @@
         }
 
         function showRedEnvelope() {
+            clearOrder();
             if (hasRedeemed()) {
                 showPopup('抱歉<br>您已领取过红包', '');
                 return;
@@ -310,6 +351,7 @@
 
         function markServed() {
             clearInterval(countdownInterval);
+            clearOrder();
             const timerEl = document.getElementById('timer');
             const servedBtn = document.getElementById('servedBtn');
             timerEl.classList.remove('show');
@@ -317,6 +359,8 @@
             
             showPopup('取餐成功<br>祝您用餐愉快', '');
         }
+
+        init();
     </script>
 </body>
 </html>
