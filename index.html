@@ -181,6 +181,7 @@
     <script>
         let countdownInterval = null;
         let orderStartTime = null;
+        let isOrdering = false;
 
         function playDingDong() {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -208,7 +209,17 @@
         }
 
         function generateRedPacketCode() {
-            return 'RD' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            const array = new Uint32Array(3);
+            crypto.getRandomValues(array);
+            return 'RD' + array[0].toString(36).toUpperCase();
+        }
+
+        function hasRedeemed() {
+            return localStorage.getItem('redPacketRedeemed') === 'true';
+        }
+
+        function markRedeemed() {
+            localStorage.setItem('redPacketRedeemed', 'true');
         }
 
         function showPopup(text, subText, isRedEnvelope = false) {
@@ -218,7 +229,7 @@
             const popupContent = popup.querySelector('.popup-content');
             
             popupText.innerHTML = text;
-            popupSub.textContent = subText || '';
+            popupSub.innerHTML = subText || '';
             
             if (isRedEnvelope) {
                 popupContent.classList.add('red-envelope');
@@ -234,12 +245,20 @@
         }
 
         function orderDish(dishName, price) {
-            playDingDong();
+            if (isOrdering) return;
+            isOrdering = true;
+
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
             
+            playDingDong();
             showPopup('下单成功<br>预计 10 分钟出餐', dishName + ' ¥' + price);
             
             orderStartTime = Date.now();
             startCountdown();
+            
+            setTimeout(() => { isOrdering = false; }, 2000);
         }
 
         function startCountdown() {
@@ -269,9 +288,18 @@
         }
 
         function showRedEnvelope() {
+            if (hasRedeemed()) {
+                showPopup('抱歉<br>您已领取过红包', '');
+                return;
+            }
+
             const amounts = [1, 1.5, 2, 2.5, 3];
-            const amount = amounts[Math.floor(Math.random() * amounts.length)];
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            const amount = amounts[array[0] % amounts.length];
             const code = generateRedPacketCode();
+            
+            markRedeemed();
             
             showPopup(
                 '超时红包补偿<br>¥' + amount,
