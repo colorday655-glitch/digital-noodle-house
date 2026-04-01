@@ -4,7 +4,7 @@ pipeline {
     environment {
         VM_HOST = '173.254.206.13'
         VM_USER = 'root'
-        TARGET_PATH = '/var/www/html/index.html'
+        TARGET_PATH = '/var/www/html/digital-noodle-house/index.html'
     }
     
     stages {
@@ -52,7 +52,7 @@ pipeline {
             steps {
                 echo '📢 发送飞书通知...'
                 script {
-                    def webhook = 'https://open.feishu.cn/open-apis/bot/v2/hook/4b6e3f9e-8a1e-4b2c-9d3e-5f6a7b8c9d0e'
+                    def webhook = 'https://open.feishu.cn/open-apis/bot/v2/hook/1c2e5968-071c-4a69-b88d-c881b55754cc'
                     def message = '''
                     {
                         "msg_type": "text",
