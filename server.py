@@ -63,6 +63,8 @@ def get_hostname():
         return "unknown"
 
 class StatsHandler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'
+    
     def do_GET(self):
         if self.path == '/api/stats' or self.path == '/stats':
             uptime = get_uptime()
@@ -82,16 +84,26 @@ class StatsHandler(BaseHTTPRequestHandler):
             
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Connection', 'close')
             self.end_headers()
             self.wfile.write(json.dumps(stats).encode())
         elif self.path == '/' or self.path == '/dashboard.html':
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
+            self.send_header('Connection', 'close')
             self.end_headers()
             self.wfile.write(b'Redirect to dashboard')
         else:
             self.send_response(404)
+            self.send_header('Connection', 'close')
             self.end_headers()
+    
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Connection', 'close')
+        self.end_headers()
     
     def log_message(self, format, *args):
         pass
