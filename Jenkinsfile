@@ -32,12 +32,6 @@ pipeline {
             }
         }
         
-        stage('启动监控服务') {
-            steps {
-                sh 'sshpass -p "${VM_PWD}" ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_HOST} "pkill -f server.py || true; cd ${TARGET_DIR} && nohup python3 server.py > /tmp/server.log 2>&1 &"'
-            }
-        }
-        
         stage('通知') {
             steps {
                 sh 'curl -X POST -H "Content-Type: application/json" -d "{\\"msg_type\\":\\"text\\",\\"content\\":{\\"text\\":\\"✅ 质检通过，招牌菜品已自动上架正式环境，准备营业！\\"}}" "${FEISHU_WEBHOOK}"'
