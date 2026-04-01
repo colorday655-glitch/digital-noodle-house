@@ -5,6 +5,8 @@ import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
+ORDERS_FILE = '/var/www/html/digital-noodle-house/orders.txt'
+
 def get_cpu():
     try:
         with open('/proc/stat', 'r') as f:
@@ -57,11 +59,19 @@ class StatsHandler(BaseHTTPRequestHandler):
             days = int(uptime // 86400)
             hours = int((uptime % 86400) // 3600)
             
+            # 统计订单数
+            try:
+                with open(ORDERS_FILE, 'r') as f:
+                    orders = len([l for l in f.readlines() if l.strip()])
+            except:
+                orders = 0
+            
             stats = {
                 'cpu': get_cpu(),
                 'memory': get_memory(),
                 'load': get_load(),
                 'hostname': get_hostname(),
+                'orders': orders,
                 'uptime': int(uptime),
                 'uptimeFormatted': f"{days}天{hours}小时"
             }
@@ -74,6 +84,29 @@ class StatsHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
+    
+    def do_POST(self):
+        if self.path == '/api/order':
+            try:
+                with open(ORDERS_FILE, 'a') as f:
+                    f.write(f"{int(time.time())}\n")
+            except:
+                pass
+            self.send_response(200)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"status":"ok"}')
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
 
 if __name__ == '__main__':
     port = 8888
