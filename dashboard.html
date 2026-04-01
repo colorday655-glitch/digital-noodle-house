@@ -289,49 +289,44 @@
     </div>
 
     <script>
-        let startTime = Date.now();
-        
-        async function fetchStats() {
-            try {
-                const response = await fetch('http://173.254.206.13:8888/api/stats');
-                const data = await response.json();
-                
-                document.getElementById('cpuValue').innerHTML = data.cpu + '<span class="stat-unit">%</span>';
-                document.getElementById('memory').textContent = data.memory;
-                document.getElementById('load').textContent = data.load;
-                document.getElementById('connections').textContent = data.connections;
-                document.getElementById('hostname').textContent = data.hostname;
-                document.getElementById('orderValue').innerHTML = data.orders + '<span class="stat-unit">单</span>';
-                
-                const days = Math.floor(data.uptime / 86400);
-                const hours = Math.floor((data.uptime % 86400) / 3600);
-                document.getElementById('uptimeValue').innerHTML = (days > 0 ? days + '天 ' : '') + hours + '<span class="stat-unit">时</span>';
-                document.getElementById('uptimeSub').textContent = '累计: ' + data.uptimeFormatted;
-                
-                const cpuCard = document.getElementById('cpuCard');
-                cpuCard.classList.remove('warning', 'danger');
-                if (data.cpu > 80) {
-                    cpuCard.classList.add('danger');
-                } else if (data.cpu > 60) {
-                    cpuCard.classList.add('warning');
-                }
-                
-                const statusDot = document.getElementById('statusDot');
-                statusDot.classList.remove('warning', 'danger');
-                if (data.cpu > 80) {
-                    statusDot.classList.add('danger');
-                } else if (data.cpu > 60) {
-                    statusDot.classList.add('warning');
-                }
-                
-            } catch (e) {
-                console.error('获取数据失败:', e);
-                document.getElementById('cpuSub').textContent = '连接异常';
-            }
+        function jsonpCallback(data) {
+            document.getElementById('cpuValue').innerHTML = data.cpu + '<span class="stat-unit">%</span>';
+            document.getElementById('memory').textContent = data.memory;
+            document.getElementById('load').textContent = data.load;
+            document.getElementById('connections').textContent = data.connections;
+            document.getElementById('hostname').textContent = data.hostname;
+            document.getElementById('orderValue').innerHTML = data.orders + '<span class="stat-unit">单</span>';
+            
+            const days = Math.floor(data.uptime / 86400);
+            const hours = Math.floor((data.uptime % 86400) / 3600);
+            document.getElementById('uptimeValue').innerHTML = (days > 0 ? days + '天 ' : '') + hours + '<span class="stat-unit">时</span>';
+            document.getElementById('uptimeSub').textContent = '累计: ' + data.uptimeFormatted;
+            
+            const cpuCard = document.getElementById('cpuCard');
+            cpuCard.classList.remove('warning', 'danger');
+            if (data.cpu > 80) cpuCard.classList.add('danger');
+            else if (data.cpu > 60) cpuCard.classList.add('warning');
+            
+            const statusDot = document.getElementById('statusDot');
+            statusDot.classList.remove('warning', 'danger');
+            if (data.cpu > 80) statusDot.classList.add('danger');
+            else if (data.cpu > 60) statusDot.classList.add('warning');
         }
         
-        fetchStats();
-        setInterval(fetchStats, 5000);
+        function loadStats() {
+            var script = document.createElement('script');
+            script.src = 'http://173.254.206.13:8888/api/stats?callback=jsonpCallback';
+            script.onerror = function() {
+                document.getElementById('cpuSub').textContent = '连接异常';
+            };
+            document.body.appendChild(script);
+            setTimeout(function() {
+                document.body.removeChild(script);
+            }, 1000);
+        }
+        
+        loadStats();
+        setInterval(loadStats, 5000);
     </script>
 </body>
 </html>

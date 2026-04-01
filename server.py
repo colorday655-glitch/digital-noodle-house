@@ -68,8 +68,6 @@ class StatsHandler(BaseHTTPRequestHandler):
     def _set_headers(self):
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.send_header('Connection', 'close')
         self.send_header('Cache-Control', 'no-cache')
     
@@ -79,7 +77,11 @@ class StatsHandler(BaseHTTPRequestHandler):
         self.end_headers()
     
     def do_GET(self):
-        if self.path == '/api/stats' or self.path == '/stats':
+        from urllib.parse import parse_qs
+        query = parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+        callback = query.get('callback', [None])[0]
+        
+        if self.path.startswith('/api/stats') or self.path.startswith('/stats'):
             uptime = get_uptime()
             days = int(uptime // 86400)
             hours = int((uptime % 86400) // 3600)
@@ -96,9 +98,17 @@ class StatsHandler(BaseHTTPRequestHandler):
             }
             
             self.send_response(200)
-            self._set_headers()
+            if callback:
+                self.send_header('Content-Type', 'application/javascript')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                output = f"{callback}({json.dumps(stats)})"
+            else:
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                output = json.dumps(stats)
+            self.send_header('Connection', 'close')
             self.end_headers()
-            self.wfile.write(json.dumps(stats).encode())
+            self.wfile.write(output.encode())
         else:
             self.send_response(404)
             self._set_headers()
