@@ -83,46 +83,36 @@
     </div>
 
     <script>
-        // 定义全局回调函数
-        function jsonpCallback(data) {
-            console.log("Data Received:", data); // 调试用
-            
-            document.getElementById('cpuValue').innerHTML = data.cpu + '<span class="stat-unit">%</span>';
-            document.getElementById('memory').textContent = data.memory;
-            document.getElementById('load').textContent = data.load;
-            document.getElementById('connections').textContent = data.connections;
-            document.getElementById('hostname').textContent = data.hostname;
-            document.getElementById('orderValue').innerHTML = data.orders + '<span class="stat-unit">单</span>';
-            
-            const days = Math.floor(data.uptime / 86400);
-            const hours = Math.floor((data.uptime % 86400) / 3600);
-            document.getElementById('uptimeValue').innerHTML = (days > 0 ? days + '天 ' : '') + hours + '<span class="stat-unit">时</span>';
-            document.getElementById('uptimeSub').textContent = '累计: ' + data.uptimeFormatted;
-            
-            // 状态指示逻辑
-            const cpuCard = document.getElementById('cpuCard');
-            const statusDot = document.getElementById('statusDot');
-            [cpuCard, statusDot].forEach(el => {
-                el.classList.remove('warning', 'danger');
-                if (data.cpu > 80) el.classList.add('danger');
-                else if (data.cpu > 60) el.classList.add('warning');
-            });
-            document.getElementById('cpuSub').textContent = '数据获取正常';
-        }
-        
         function loadStats() {
-            const oldScript = document.getElementById('statsScript');
-            if (oldScript) oldScript.remove();
-
-            const script = document.createElement('script');
-            script.id = 'statsScript';
-            // 确保使用你的服务器 IP 和端口
-            script.src = 'http://173.254.206.13:8888/api/stats?callback=jsonpCallback&t=' + new Date().getTime();
-            script.onerror = function() {
-                document.getElementById('cpuSub').textContent = '连接异常 (网络/防火墙)';
-                console.error("Failed to load script from server.");
-            };
-            document.body.appendChild(script);
+            fetch('/digital-noodle-house/stats.json?t=' + Date.now())
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('cpuValue').innerHTML = data.cpu + '<span class="stat-unit">%</span>';
+                    document.getElementById('memory').textContent = data.memory;
+                    document.getElementById('load').textContent = data.load;
+                    document.getElementById('hostname').textContent = 'racknerd';
+                    document.getElementById('orderValue').innerHTML = '0<span class="stat-unit">单</span>';
+                    document.getElementById('connections').textContent = '0';
+                    
+                    const days = Math.floor(data.uptime / 86400);
+                    const hours = Math.floor((data.uptime % 86400) / 3600);
+                    document.getElementById('uptimeValue').innerHTML = (days > 0 ? days + '天 ' : '') + hours + '<span class="stat-unit">时</span>';
+                    document.getElementById('uptimeSub').textContent = '累计: ' + Math.floor(data.uptime) + '秒';
+                    
+                    const cpuCard = document.getElementById('cpuCard');
+                    const statusDot = document.getElementById('statusDot');
+                    [cpuCard, statusDot].forEach(el => {
+                        el.classList.remove('warning', 'danger');
+                        if (data.cpu > 80) el.classList.add('danger');
+                        else if (data.cpu > 60) el.classList.add('warning');
+                    });
+                    
+                    document.getElementById('cpuSub').textContent = '数据获取正常';
+                })
+                .catch(e => {
+                    document.getElementById('cpuSub').textContent = '连接异常';
+                    console.error(e);
+                });
         }
         
         loadStats();
