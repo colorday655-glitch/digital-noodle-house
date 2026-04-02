@@ -111,7 +111,7 @@
                     document.getElementById('load').textContent = data.load;
                     document.getElementById('cpu').textContent = data.cpu + '%';
                     document.getElementById('hostname').textContent = data.hostname;
-                    document.getElementById('orderCount').innerHTML = '0<span class="stat-unit">单</span>';
+                    document.getElementById('orderCount').innerHTML = data.orders + '<span class="stat-unit">单</span>';
                     
                     const days = Math.floor(data.uptime / 86400);
                     const hours = Math.floor((data.uptime % 86400) / 3600);
