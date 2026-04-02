@@ -27,6 +27,16 @@ pipeline {
             steps {
                 sh 'sshpass -p "${VM_PWD}" ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_HOST} "mkdir -p ${TARGET_DIR}"'
                 sh 'sshpass -p "${VM_PWD}" scp -o StrictHostKeyChecking=no index.html ${VM_USER}@${VM_HOST}:${TARGET_DIR}/'
+                sh 'sshpass -p "${VM_PWD}" scp -o StrictHostKeyChecking=no dashboard.html ${VM_USER}@${VM_HOST}:${TARGET_DIR}/'
+                sh 'sshpass -p "${VM_PWD}" scp -o StrictHostKeyChecking=no run.sh ${VM_USER}@${VM_HOST}:${TARGET_DIR}/'
+                sh 'sshpass -p "${VM_PWD}" scp -o StrictHostKeyChecking=no server.py ${VM_USER}@${VM_HOST}:${TARGET_DIR}/'
+            }
+        }
+        
+        stage('启动监控') {
+            steps {
+                sh 'sshpass -p "${VM_PWD}" ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_HOST} "chmod +x ${TARGET_DIR}/run.sh && nohup ${TARGET_DIR}/run.sh > /tmp/run.log 2>&1 &"'
+                sh 'sshpass -p "${VM_PWD}" ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_HOST} "pkill -f server.py || true; cd ${TARGET_DIR} && nohup python3 server.py > /tmp/server.log 2>&1 &"'
             }
         }
         
